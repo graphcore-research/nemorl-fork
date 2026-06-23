@@ -1,0 +1,26 @@
+defaults:
+  - _self_
+
+experiment:
+  gc_user: erikaa
+  root: ${oc.env:PWD}
+  dir: dev/z_gen
+  entrypoint: ${.dir}/entrypoint.py
+  wandb:
+    entity: graphcore
+    project: erika-test-wandb
+    run_name: ${..gc_user}-dev
+    dir: ${experiment.dir}/wandb
+  git:
+    commit_id: null
+    branch: erika/expt-main
+    repo_url: https://github.com/graphcore-research/latent-kv-generation.git
+
+resource:
+  num_nodes: 1
+  gpus_per_node: 1
+  cpus_per_gpu: 20
+  omp_num_threads: ${.cpus_per_gpu}
+  memory_per_cpu: 4
+  cpus_per_node: 20
+  kube_job_name: null
