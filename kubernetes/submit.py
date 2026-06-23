@@ -175,7 +175,7 @@ def post_submit(retcode: int, stderr: str, kube_job_name: str) -> None:
         print("Useful commands:")
         print(f"  List jobs:     {typer.style('kubectl get pytorchjobs | grep ', fg=typer.colors.YELLOW)}")
         print(f"  Delete job:    {typer.style(f'kubectl delete pytorchjob {kube_job_name}', fg=typer.colors.YELLOW)}")
-        print(f"  Watch job:     {typer.style(f'src/kubernetes/watch.py {kube_job_name}', fg=typer.colors.YELLOW)}")
+        print(f"  Watch job:     {typer.style(f'kubernetes/watch.py {kube_job_name}', fg=typer.colors.YELLOW)}")
         print(f"  List pods:     {typer.style('kubectl get pods | grep ', fg=typer.colors.YELLOW)}")
         print(f"  View logs:     {typer.style(f'kubectl logs -f {kube_job_name}', fg=typer.colors.YELLOW)}")
     else:
