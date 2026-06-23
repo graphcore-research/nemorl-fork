@@ -1,0 +1,76 @@
+# infra/nrl_k8s/examples/grpo-smoke.volt.infra.yaml
+namespace: graphcore
+image: erikaaranas/nemo-rl:latest
+imagePullSecrets: []
+# serviceAccount: <SERVICE_ACCOUNT_IF_REQUIRED>
+
+labels:
+  nrl-k8s/owner: ${user:}
+
+submit:
+  submitter: portForward
+
+launch:
+  runMode: interactive
+  codeSource: image
+  codePath: /opt/nemo-rl
+  entrypoint: |
+    set -eu
+    cd /opt/nemo-rl
+    python -u examples/run_grpo.py \
+      --config examples/configs/grpo-smoke.yaml \
+      logger.wandb_enabled=true \
+      logger.tensorboard_enabled=false
+
+kuberay:
+  training:
+    name: ${user:}-grpo-smoke
+    labels:
+      nrl-k8s/run: grpo-smoke
+    spec:
+      rayVersion: "2.52.0"
+      headGroupSpec:
+        rayStartParams:
+          dashboard-host: "0.0.0.0"
+          num-gpus: "0"
+        template:
+          spec:
+            containers:
+              - name: ray-head
+                resources:
+                  requests: {cpu: "4", memory: "16Gi"}
+                  limits: {cpu: "8", memory: "32Gi"}
+                ports:
+                  - {containerPort: 6379, name: gcs-server}
+                  - {containerPort: 8265, name: dashboard}
+                  - {containerPort: 10001, name: client}
+                volumeMounts:
+                  - {mountPath: /dev/shm, name: dshm}
+            volumes:
+              - name: dshm
+                emptyDir: {medium: Memory, sizeLimit: 8Gi}
+
+      workerGroupSpecs:
+        - groupName: gpu-workers
+          replicas: 1
+          minReplicas: 1
+          maxReplicas: 1
+          rayStartParams:
+            num-gpus: "1"
+          template:
+            spec:
+              tolerations:
+              - key: nvidia.com/gpu
+                value: "true"
+                operator: Equal
+                effect: NoSchedule
+              containers:
+                - name: ray-worker
+                  resources:
+                    requests: {cpu: "4", memory: "16Gi", nvidia.com/gpu: "1"}
+                    limits: {cpu: "4", memory: "16Gi", nvidia.com/gpu: "1"}
+                  volumeMounts:
+                    - {mountPath: /dev/shm, name: dshm}
+              volumes:
+                - name: dshm
+                  emptyDir: {medium: Memory, sizeLimit: 32Gi}

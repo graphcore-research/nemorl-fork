@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {KUBE_JOB_NAME}
+  namespace: graphcore
+  labels:
+    user: "{GC_USER}"
+spec:
+  template:
+    spec:
+      containers:
+      - name: test
+        image: erikaaranas/nemo-rl:latest
+        imagePullPolicy: Always
+        workingDir: /opt/nemo-rl
+        env:
+        - name: GITHUB_CLUSTER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: git-cluster-token
+              key: cluster-token
+        command:
+        - bash
+        - -c
+        - |
+          set -euo pipefail
+          git config --global --add url."https://x-access-token:${{GITHUB_CLUSTER_TOKEN}}@github.com/".insteadOf "git@github.com:"
+          git config --global --add url."https://x-access-token:${{GITHUB_CLUSTER_TOKEN}}@github.com/".insteadOf "ssh://git@github.com/"
+          sleep infinity
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        resources:
+          requests:
+            nvidia.com/gpu: "{GPUS_PER_NODE}"
+          limits:
+            nvidia.com/gpu: "{GPUS_PER_NODE}"
+        ports:
+        - containerPort: 8888
+          name: notebook
+      volumes:
+      - name: workspace
+        emptyDir: {{}}
+      restartPolicy: Never
