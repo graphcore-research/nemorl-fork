@@ -19,6 +19,12 @@ spec:
             secretKeyRef:
               name: git-cluster-token
               key: cluster-token
+        - name: WANDB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wandb-api-key
+              key: api-key
+              optional: true
         command:
         - bash
         - -c
