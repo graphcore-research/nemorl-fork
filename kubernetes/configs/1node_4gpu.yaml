@@ -4,10 +4,7 @@ defaults:
 experiment:
   gc_user: erikaa
   wandb:
-    entity: graphcore
-    project: post-training-frameworks
-    run_name: ${..gc_user}-nemo-grpo_smoke-1node_4gpu
-    dir: ${experiment.dir}/wandb
+    run_name: ${..gc_user}-nemo-grpo-smoke
 
 resource:
   num_nodes: 1

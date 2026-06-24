@@ -128,9 +128,6 @@ class LambdaLabsManifest(BaseManifest):
 class VoltManifest(BaseManifest):
     kube_job_name: str
     gc_user: str
-    git_repo_host_path: str
-    git_fetch_target: str
-    git_checkout_args: str
     gpus_per_node: int
     fname: ClassVar[str] = "template.yaml"
 
@@ -139,9 +136,6 @@ class VoltManifest(BaseManifest):
         return cls(
             kube_job_name=cls._build_kube_job_name(cfg),
             gc_user=cfg.experiment.gc_user,
-            git_repo_host_path=cls._build_git_repo_host_path(cfg),
-            git_fetch_target=cls._build_git_fetch_target(cfg),
-            git_checkout_args=cls._build_git_checkout_args(cfg),
             gpus_per_node=cfg.resource.gpus_per_node,
         )
 
