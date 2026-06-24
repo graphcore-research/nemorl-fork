@@ -1,6 +1,7 @@
 defaults:
   - _self_
 
+#TODO: below are not needed for infra yaml
 experiment:
   gc_user: erikaa
   root: ${oc.env:PWD}
@@ -9,7 +10,7 @@ experiment:
   wandb:
     entity: graphcore
     project: erika-test-wandb
-    run_name: ${..gc_user}-dev
+    run_name: nemo-rl-dev
     dir: ${experiment.dir}/wandb
   git:
     commit_id: null

@@ -3,18 +3,11 @@ defaults:
 
 experiment:
   gc_user: erikaa
-  root: ${oc.env:PWD}
-  dir: dev/z_gen
-  entrypoint: ${.dir}/entrypoint.py
   wandb:
     entity: graphcore
-    project: erika-test-wandb
-    run_name: ${..gc_user}-dev
+    project: post-training-frameworks
+    run_name: ${..gc_user}-nemo-grpo_smoke-1node_4gpu
     dir: ${experiment.dir}/wandb
-  git:
-    commit_id: null
-    branch: erika/expt-main
-    repo_url: https://github.com/graphcore-research/latent-kv-generation.git
 
 resource:
   num_nodes: 1
