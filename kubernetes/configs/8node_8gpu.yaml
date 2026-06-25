@@ -1,0 +1,16 @@
+defaults:
+  - _self_
+
+experiment:
+  gc_user: erikaa
+  wandb:
+    run_name: ${..gc_user}-nemo-dapo-qwen3-8b-math
+  
+resource:
+  num_nodes: 8
+  gpus_per_node: 8
+  cpus_per_gpu: 20
+  omp_num_threads: ${.cpus_per_gpu}
+  memory_per_cpu: 4
+  cpus_per_node: 20
+  kube_job_name: null

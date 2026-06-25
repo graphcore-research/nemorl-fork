@@ -35,6 +35,11 @@ kuberay:
           num-gpus: "0"
         template:
           spec:
+            tolerations:
+            - key: nvidia.com/gpu
+              value: "true"
+              operator: Equal
+              effect: NoSchedule
             containers:
               - name: ray-head
                 resources:
