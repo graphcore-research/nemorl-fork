@@ -24,13 +24,36 @@ launch:
   codePath: /opt/nemo-rl
   entrypoint: |
     set -eu
-    cd /opt/nemo-rl
+    NEMO_RL_REPO="\${NEMO_RL_REPO:-git@github.com:graphcore-research/nemorl-fork.git}"
+    NEMO_RL_REF="\${NEMO_RL_REF:-local-only}"
+    WORKDIR=/tmp/nemo-rl-src
+
+    command -v git >/dev/null || { echo "ERROR: git is not installed in the image." >&2; exit 2; }
+    command -v ssh >/dev/null || { echo "ERROR: ssh is not installed in the image." >&2; exit 2; }
+
+    if [ -n "\${SSH_KEY_CONTENT:-}" ]; then
+      SSH_KEY_NAME="\${SSH_KEY_NAME:-id_ed25519}"
+      mkdir -p /root/.ssh
+      printf "%s\n" "$SSH_KEY_CONTENT" > "/root/.ssh/$SSH_KEY_NAME"
+      chmod 600 "/root/.ssh/$SSH_KEY_NAME"
+      export GIT_SSH_COMMAND="ssh -i /root/.ssh/$SSH_KEY_NAME -o StrictHostKeyChecking=accept-new"
+    else
+      export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+    fi
+
+    rm -rf "$WORKDIR"
+    git clone --depth 1 --branch "$NEMO_RL_REF" "$NEMO_RL_REPO" "$WORKDIR" || {
+      echo "ERROR: failed to clone $NEMO_RL_REPO branch/ref $NEMO_RL_REF." >&2
+      echo "The ref must exist on the remote; local-only laptop branches are not visible inside RayJob pods." >&2
+      exit 2
+    }
+
+    cd "$WORKDIR"
     export PYTHONPATH=.
     export RAY_enable_infeasible_task_early_exit=true
     CONFIG=examples/configs/sync-dapo-qwen3-8b-math.yaml
     if [ ! -f "$CONFIG" ]; then
-      echo "ERROR: $CONFIG is not present in the image." >&2
-      echo "RayJob mode does not upload the local recipe; rebuild/push the image with this file, or use --raycluster upload mode." >&2
+      echo "ERROR: $CONFIG is not present in $NEMO_RL_REPO@$NEMO_RL_REF." >&2
       exit 2
     fi
     python -u examples/run_grpo.py \
