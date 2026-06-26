@@ -48,10 +48,21 @@ class Pod:
     age: str
 
 
+def parse_pod_row(line: str) -> Pod | None:
+    """Parse one row from `kubectl get pods --no-headers`."""
+    parts = line.strip().split()
+    if len(parts) < 5:
+        return None
+
+    pod_name, _ready, status = parts[:3]
+    age = parts[-1]
+    return Pod(name=pod_name, status=status, age=age)
+
+
 def get_pods(kube_job_name: str) -> list[Pod]:
-    cmd = "kubectl get pods"
+    cmd = ["kubectl", "get", "pods", "--no-headers"]
     result = subprocess.run(
-        cmd.split(),
+        cmd,
         capture_output=True,
         text=True,
         check=False,
@@ -59,14 +70,16 @@ def get_pods(kube_job_name: str) -> list[Pod]:
     retcode, stdout = result.returncode, result.stdout
 
     if retcode != 0:
-        err_console.print(f"[red]Failed to run `{cmd}`. Exit code: {retcode}[/red]")
+        err_console.print(
+            f"[red]Failed to run `{' '.join(cmd)}`. Exit code: {retcode}[/red]"
+        )
         raise typer.Exit(retcode)
 
     pods = []
     for line in stdout.splitlines():
-        if kube_job_name in line:
-            pod_name, _ready, status, _restarts, age = line.strip().split()
-            pods.append(Pod(name=pod_name, status=status, age=age))
+        pod = parse_pod_row(line)
+        if pod is not None and kube_job_name in pod.name:
+            pods.append(pod)
 
     # oldest first
     pods.sort(key=lambda p: parse_timespan(p.age), reverse=True)
@@ -80,7 +93,7 @@ def create_pod_table(pods: list[Pod]) -> Table:
     table.add_column("Status", justify="center")
 
     if not pods:
-        table.add_row("No pods found", "[yellow]N/A[/yellow]")
+        table.add_row("No pods found", "[yellow]N/A[/yellow]", "[yellow]N/A[/yellow]")
         return table
 
     for pod in pods:
@@ -90,7 +103,7 @@ def create_pod_table(pods: list[Pod]) -> Table:
 
         if status == "Running":
             status = "[green]Running[/green]"
-        elif status in ["Failed", "Error", "CrashLoopBackOff"]:
+        elif status == "Failed" or "Error" in status or "CrashLoopBackOff" in status:
             status = f"[red]{status}[/red]"
         else:
             status = f"[blue]{status}[/blue]"
