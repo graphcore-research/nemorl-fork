@@ -100,7 +100,7 @@ kuberay:
                   - name: WANDB_API_KEY
                     valueFrom:
                       secretKeyRef:
-                        name: wandb-api-key
+                        name: ${user:}-secrets
                         key: WANDB_API_KEY
                 resources:
                   requests: {cpu: "4", memory: "16Gi"}
@@ -186,7 +186,7 @@ kuberay:
                     - name: WANDB_API_KEY
                       valueFrom:
                         secretKeyRef:
-                          name: wandb-api-key
+                          name: ${user:}-secrets
                           key: WANDB_API_KEY
                   resources:
                     requests: {cpu: "4", memory: "16Gi", nvidia.com/gpu: "4"} # for kubernetes
