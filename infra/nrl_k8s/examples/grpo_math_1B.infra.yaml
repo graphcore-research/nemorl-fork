@@ -103,8 +103,8 @@ kuberay:
                         name: ${user:}-secrets
                         key: WANDB_API_KEY
                 resources:
-                  requests: {cpu: "4", memory: "16Gi"}
-                  limits: {cpu: "8", memory: "32Gi"}
+                  requests: {cpu: "8", memory: "64Gi"}
+                  limits: {cpu: "8", memory: "64Gi"}
                 ports:
                   - {containerPort: 6379, name: gcs-server}
                   - {containerPort: 8265, name: dashboard}
@@ -189,8 +189,8 @@ kuberay:
                           name: ${user:}-secrets
                           key: WANDB_API_KEY
                   resources:
-                    requests: {cpu: "4", memory: "16Gi", nvidia.com/gpu: "4"} # for kubernetes
-                    limits: {cpu: "4", memory: "16Gi", nvidia.com/gpu: "4"}
+                    requests: {cpu: "32", memory: "128Gi", nvidia.com/gpu: "4"} # for kubernetes
+                    limits: {cpu: "32", memory: "128Gi", nvidia.com/gpu: "4"}
                   volumeMounts:
                     - {mountPath: /tmp, name: code-tmp}
                     - {mountPath: /dev/shm, name: dshm}
