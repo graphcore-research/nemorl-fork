@@ -24,7 +24,7 @@ launch:
     cd "$NEMO_RL_WORKDIR"
     export PYTHONPATH="$NEMO_RL_WORKDIR:\${PYTHONPATH:-}"
     echo "Using NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_WORKDIR"
-    RUN_ID="nemo-grpo-math-1b-${USER:-erikaa}-$(date -u +%Y%m%dT%H%M%SZ)"
+    RUN_ID="nemo-grpo-math-1b-$(date -u +%Y%m%dT%H%M%SZ)"
     python -u examples/run_grpo.py \
       --config examples/configs/grpo_math_1B.yaml \
       logger.wandb_enabled=true \
