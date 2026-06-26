@@ -1,4 +1,3 @@
-# infra/nrl_k8s/examples/grpo-smoke.volt.infra.yaml
 namespace: graphcore
 image: erikaaranas/nemo-rl:latest
 imagePullSecrets: []
@@ -14,6 +13,7 @@ launch:
   runMode: interactive
   codeSource: image
   codePath: /opt/nemo-rl
+  # ray job entrypoint once the pods have been setup
   entrypoint: |
     set -eu
     NEMO_RL_WORKDIR="\${NEMO_RL_WORKDIR:-/tmp/nemo-rl-src}"
@@ -25,15 +25,15 @@ launch:
     export PYTHONPATH="$NEMO_RL_WORKDIR:\${PYTHONPATH:-}"
     echo "Using NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_WORKDIR"
     python -u examples/run_grpo.py \
-      --config examples/configs/grpo-smoke.yaml \
+      --config examples/configs/grpo_math_1B.yaml \
       logger.wandb_enabled=true \
       logger.tensorboard_enabled=false
 
 kuberay:
   training:
-    name: ${user:}-grpo-smoke
+    name: ${user:}-grpo-math-1b
     labels:
-      nrl-k8s/run: grpo-smoke
+      nrl-k8s/run: grpo-math-1b
     spec:
       rayVersion: "2.52.0"
       headGroupSpec:
@@ -48,7 +48,6 @@ kuberay:
                 envFrom:
                   - secretRef:
                       name: ${user:}-secrets
-                      optional: true
                 command: ["/bin/bash", "-lc", "--"]
                 args:
                   - |
