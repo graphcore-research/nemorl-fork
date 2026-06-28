@@ -280,7 +280,7 @@ cluster:
   # Volt NVL72 workers expose 4 GPUs per node. Keep this in sync with the
   # Ray worker resources in infra/nrl_k8s/examples/sync-dapo-qwen3-8b-math.infra.yaml.
   gpus_per_node: 4
-  num_nodes: 2
+  num_nodes: 4
   # Port range for the distributed master address (TCPStore / NCCL rendezvous)
   # and per-worker available ports.  Kept below the OS ephemeral range
   # (32768-60999 on stock Linux).  See ray.sub for the full port layout.

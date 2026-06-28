@@ -132,9 +132,9 @@ kuberay:
 
       workerGroupSpecs:
         - groupName: gpu-workers
-          replicas: 8
-          minReplicas: 8
-          maxReplicas: 8
+          replicas: 4
+          minReplicas: 4
+          maxReplicas: 4
           rayStartParams:
             num-gpus: "4"
           template:
