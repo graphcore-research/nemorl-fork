@@ -38,7 +38,7 @@ grpo:
     enabled: true
     source_min: 0.0
     source_max: 1.0
-    target_min: -1.0
+    target_min: 0.0
     target_max: 1.0
   seq_logprob_error_threshold: null
   # Advantage value assigned to invalid tool call tokens (e.g. -5.0 to penalize). null disables.
