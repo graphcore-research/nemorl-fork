@@ -22,6 +22,8 @@ launch:
   runMode: interactive
   codeSource: image
   codePath: /opt/nemo-rl
+  env:
+    RAY_BACKEND_LOG_LEVEL: debug
   entrypoint: |
     set -eu
     NEMO_RL_WORKDIR="\${NEMO_RL_WORKDIR:-/tmp/nemo-rl-src}"
