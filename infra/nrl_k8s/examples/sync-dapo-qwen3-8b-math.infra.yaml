@@ -24,44 +24,22 @@ launch:
   codePath: /opt/nemo-rl
   entrypoint: |
     set -eu
-    NEMO_RL_REPO="\${NEMO_RL_REPO:-git@github.com:graphcore-research/nemorl-fork.git}"
-    NEMO_RL_REF="\${NEMO_RL_REF:-local-only}"
-    WORKDIR=/tmp/nemo-rl-src
-
-    command -v git >/dev/null || { echo "ERROR: git is not installed in the image." >&2; exit 2; }
-    command -v ssh >/dev/null || { echo "ERROR: ssh is not installed in the image." >&2; exit 2; }
-
-    if [ -n "\${SSH_KEY_CONTENT:-}" ]; then
-      SSH_KEY_NAME="\${SSH_KEY_NAME:-id_ed25519}"
-      mkdir -p /root/.ssh
-      printf "%s\n" "$SSH_KEY_CONTENT" > "/root/.ssh/$SSH_KEY_NAME"
-      chmod 600 "/root/.ssh/$SSH_KEY_NAME"
-      export GIT_SSH_COMMAND="ssh -i /root/.ssh/$SSH_KEY_NAME -o StrictHostKeyChecking=accept-new"
-    else
-      export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
-    fi
-
-    rm -rf "$WORKDIR"
-    git clone --depth 1 --branch "$NEMO_RL_REF" "$NEMO_RL_REPO" "$WORKDIR" || {
-      echo "ERROR: failed to clone $NEMO_RL_REPO branch/ref $NEMO_RL_REF." >&2
-      echo "The ref must exist on the remote; local-only laptop branches are not visible inside RayJob pods." >&2
-      exit 2
-    }
-
-    cd "$WORKDIR"
-    export PYTHONPATH=.
-    export RAY_enable_infeasible_task_early_exit=true
-    CONFIG=examples/configs/sync-dapo-qwen3-8b-math.yaml
-    if [ ! -f "$CONFIG" ]; then
-      echo "ERROR: $CONFIG is not present in $NEMO_RL_REPO@$NEMO_RL_REF." >&2
+    NEMO_RL_WORKDIR="\${NEMO_RL_WORKDIR:-/tmp/nemo-rl-src}"
+    if [ ! -f "$NEMO_RL_WORKDIR/examples/run_grpo.py" ]; then
+      echo "ERROR: synced NeMo-RL checkout not found at $NEMO_RL_WORKDIR." >&2
       exit 2
     fi
+    cd "$NEMO_RL_WORKDIR"
+    export PYTHONPATH="$NEMO_RL_WORKDIR:\${PYTHONPATH:-}"
+    echo "Using NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_WORKDIR"
+    RUN_ID="nemo-sync-dapo-qwen3-8b-math-$(date -u +%Y%m%dT%H%M%SZ)"
     python -u examples/run_grpo.py \
-      --config "$CONFIG" \
-      cluster.gpus_per_node=4 \
-      cluster.num_nodes=2 \
+      --config examples/configs/grpo_math_1B.yaml \
       logger.wandb_enabled=true \
+      logger.wandb.project=post-training-frameworks \
+      "logger.wandb.name=$RUN_ID" \
       logger.tensorboard_enabled=false
+
 
 kuberay:
   training:
@@ -76,16 +54,49 @@ kuberay:
           num-gpus: "0"
         template:
           spec:
+            initContainers:
+              - name: sync-nemo-rl
+                image: erikaaranas/nemo-rl:latest
+                envFrom:
+                  - secretRef:
+                      name: ${user:}-secrets
+                command: ["/bin/bash", "-lc", "--"]
+                args:
+                  - |
+                    set -eu
+                    NEMO_RL_REPO="\${NEMO_RL_REPO:-git@github.com:graphcore-research/nemorl-fork.git}"
+                    NEMO_RL_REF="\${NEMO_RL_REF:-local-only}"
+                    NEMO_RL_WORKDIR="\${NEMO_RL_WORKDIR:-/tmp/nemo-rl-src}"
+
+                    command -v git >/dev/null || { echo "ERROR: git is not installed in the image." >&2; exit 2; }
+
+                    case "$NEMO_RL_REPO" in
+                      git@*|ssh://*)
+                        command -v ssh >/dev/null || { echo "ERROR: ssh is not installed in the image." >&2; exit 2; }
+                        if [ -n "\${SSH_KEY_CONTENT:-}" ]; then
+                          SSH_KEY_NAME="\${SSH_KEY_NAME:-id_ed25519}"
+                          mkdir -p /root/.ssh
+                          printf "%s\n" "$SSH_KEY_CONTENT" > "/root/.ssh/$SSH_KEY_NAME"
+                          chmod 600 "/root/.ssh/$SSH_KEY_NAME"
+                          export GIT_SSH_COMMAND="ssh -i /root/.ssh/$SSH_KEY_NAME -o StrictHostKeyChecking=accept-new"
+                        else
+                          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+                        fi
+                        ;;
+                    esac
+
+                    rm -rf "$NEMO_RL_WORKDIR"
+                    git clone --depth 1 --branch "$NEMO_RL_REF" "$NEMO_RL_REPO" "$NEMO_RL_WORKDIR" || {
+                      echo "ERROR: failed to clone $NEMO_RL_REPO branch/ref $NEMO_RL_REF." >&2
+                      echo "Push the branch to the remote and make sure ${user:}-secrets contains an SSH key with access." >&2
+                      exit 2
+                    }
+                    cd "$NEMO_RL_WORKDIR"
+                    echo "Synced NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_REPO@$NEMO_RL_REF"
+                volumeMounts:
+                  - {mountPath: /tmp, name: code-tmp}
             tolerations:
             - key: nvidia.com/gpu
-              value: "true"
-              operator: Equal
-              effect: NoSchedule
-            - key: kueue.x-k8s.io/dedicated
-              value: "true"
-              operator: Equal
-              effect: NoSchedule
-            - key: reserved-for-multinode
               value: "true"
               operator: Equal
               effect: NoSchedule
@@ -96,20 +107,28 @@ kuberay:
                       name: ${user:}-secrets
                       optional: true
                 env:
-                  - {name: NCCL_DEBUG, value: WARN}
-                  - {name: RAY_memory_monitor_refresh_ms, value: "0"}
+                  - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
+                  - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                  - name: WANDB_API_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: ${user:}-secrets
+                        key: WANDB_API_KEY
                 resources:
-                  requests: {cpu: "8", memory: "32Gi"}
-                  limits: {cpu: "16", memory: "64Gi"}
+                  requests: {cpu: "8", memory: "64Gi"}
+                  limits: {cpu: "8", memory: "64Gi"}
                 ports:
                   - {containerPort: 6379, name: gcs-server}
                   - {containerPort: 8265, name: dashboard}
                   - {containerPort: 10001, name: client}
                 volumeMounts:
+                  - {mountPath: /tmp, name: code-tmp}
                   - {mountPath: /dev/shm, name: dshm}
             volumes:
+              - name: code-tmp
+                emptyDir: {}
               - name: dshm
-                emptyDir: {medium: Memory, sizeLimit: 16Gi}
+                emptyDir: {medium: Memory, sizeLimit: 8Gi}
 
       workerGroupSpecs:
         - groupName: gpu-workers
@@ -124,26 +143,50 @@ kuberay:
                 kueue.x-k8s.io/podset-slice-required-topology: nvidia.com/gpu.clique
                 kueue.x-k8s.io/podset-slice-size: "2"
             spec:
-              runtimeClassName: nvidia
-              affinity:
-                nodeAffinity:
-                  requiredDuringSchedulingIgnoredDuringExecution:
-                    nodeSelectorTerms:
-                      - matchExpressions:
-                          - key: nvidia.com/gpu.clique
-                            operator: NotIn
-                            values:
-                              - a6ac8db7-d676-be13-eb99-486ebfb90a69.3
+              initContainers:
+                - name: sync-nemo-rl
+                  image: erikaaranas/nemo-rl:latest
+                  envFrom:
+                    - secretRef:
+                        name: ${user:}-secrets
+                        optional: true
+                  command: ["/bin/bash", "-lc", "--"]
+                  args:
+                    - |
+                      set -eu
+                      NEMO_RL_REPO="\${NEMO_RL_REPO:-git@github.com:graphcore-research/nemorl-fork.git}"
+                      NEMO_RL_REF="\${NEMO_RL_REF:-local-only}"
+                      NEMO_RL_WORKDIR="\${NEMO_RL_WORKDIR:-/tmp/nemo-rl-src}"
+
+                      command -v git >/dev/null || { echo "ERROR: git is not installed in the image." >&2; exit 2; }
+
+                      case "$NEMO_RL_REPO" in
+                        git@*|ssh://*)
+                          command -v ssh >/dev/null || { echo "ERROR: ssh is not installed in the image." >&2; exit 2; }
+                          if [ -n "\${SSH_KEY_CONTENT:-}" ]; then
+                            SSH_KEY_NAME="\${SSH_KEY_NAME:-id_ed25519}"
+                            mkdir -p /root/.ssh
+                            printf "%s\n" "$SSH_KEY_CONTENT" > "/root/.ssh/$SSH_KEY_NAME"
+                            chmod 600 "/root/.ssh/$SSH_KEY_NAME"
+                            export GIT_SSH_COMMAND="ssh -i /root/.ssh/$SSH_KEY_NAME -o StrictHostKeyChecking=accept-new"
+                          else
+                            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+                          fi
+                          ;;
+                      esac
+
+                      rm -rf "$NEMO_RL_WORKDIR"
+                      git clone --depth 1 --branch "$NEMO_RL_REF" "$NEMO_RL_REPO" "$NEMO_RL_WORKDIR" || {
+                        echo "ERROR: failed to clone $NEMO_RL_REPO branch/ref $NEMO_RL_REF." >&2
+                        echo "Push the branch to the remote and make sure ${user:}-secrets contains an SSH key with access." >&2
+                        exit 2
+                      }
+                      cd "$NEMO_RL_WORKDIR"
+                      echo "Synced NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_REPO@$NEMO_RL_REF"
+                  volumeMounts:
+                    - {mountPath: /tmp, name: code-tmp}
               tolerations:
               - key: nvidia.com/gpu
-                value: "true"
-                operator: Equal
-                effect: NoSchedule
-              - key: kueue.x-k8s.io/dedicated
-                value: "true"
-                operator: Equal
-                effect: NoSchedule
-              - key: reserved-for-multinode
                 value: "true"
                 operator: Equal
                 effect: NoSchedule
@@ -154,13 +197,21 @@ kuberay:
                         name: ${user:}-secrets
                         optional: true
                   env:
-                    - {name: NCCL_DEBUG, value: WARN}
-                    - {name: RAY_memory_monitor_refresh_ms, value: "0"}
+                    - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
+                    - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                    - name: WANDB_API_KEY
+                      valueFrom:
+                        secretKeyRef:
+                          name: ${user:}-secrets
+                          key: WANDB_API_KEY
                   resources:
-                    requests: {cpu: "32", memory: "256Gi", nvidia.com/gpu: "4", vpc.amazonaws.com/efa: "16"}
-                    limits: {cpu: "32", memory: "256Gi", nvidia.com/gpu: "4", vpc.amazonaws.com/efa: "16"}
+                    requests: {cpu: "32", memory: "128Gi", nvidia.com/gpu: "4"} # for kubernetes, per node
+                    limits: {cpu: "32", memory: "128Gi", nvidia.com/gpu: "4"}
                   volumeMounts:
+                    - {mountPath: /tmp, name: code-tmp}
                     - {mountPath: /dev/shm, name: dshm}
               volumes:
+                - name: code-tmp
+                  emptyDir: {}
                 - name: dshm
-                  emptyDir: {medium: Memory, sizeLimit: 128Gi}
+                  emptyDir: {medium: Memory, sizeLimit: 32Gi}
