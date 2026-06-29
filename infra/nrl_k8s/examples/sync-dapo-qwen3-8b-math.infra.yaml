@@ -14,6 +14,7 @@ imagePullSecrets: []
 labels:
   nrl-k8s/owner: ${user:}
   kueue.x-k8s.io/queue-name: unified
+  kueue.x-k8s.io/priority-class: high
 
 submit:
   submitter: portForward
