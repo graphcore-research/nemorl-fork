@@ -1,10 +1,11 @@
-# Infra for examples/configs/sync-dapo-qwen3-8b-math.yaml on graphcore.
+# Infra for examples/configs/async-dapo-qwen3-8b-math.yaml on graphcore.
 #
-# The recipe is a colocated DTensor/FSDP GRPO run:
-#   cluster.num_nodes=2, cluster.gpus_per_node=4
-# so the RayCluster below creates 2 GPU workers, each requesting a
-# 4-GPU node. Volt multinode nodes are gated by Kueue/reserved taints, so
-# both head and worker pods carry those tolerations.
+# The recipe is a non-colocated async DTensor/FSDP GRPO run:
+#   cluster.num_nodes=4, cluster.gpus_per_node=4
+# so the RayCluster below creates 4 GPU workers, each requesting a
+# 4-GPU node. The recipe reserves 1 node for vLLM generation and uses
+# the remaining nodes for training. Volt multinode nodes are gated by
+# Kueue/reserved taints, so both head and worker pods carry those tolerations.
 
 namespace: graphcore
 image: erikaaranas/nemo-rl:latest
@@ -35,9 +36,9 @@ launch:
     cd "$NEMO_RL_WORKDIR"
     export PYTHONPATH="$NEMO_RL_WORKDIR:\${PYTHONPATH:-}"
     echo "Using NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_WORKDIR"
-    RUN_ID="nemo-sync-dapo-qwen3-8b-math-$(date -u +%Y%m%dT%H%M%SZ)"
+    RUN_ID="nemo-async-dapo-qwen3-8b-math-$(date -u +%Y%m%dT%H%M%SZ)"
     python -u examples/run_grpo.py \
-      --config examples/configs/sync-dapo-qwen3-8b-math.yaml \
+      --config examples/configs/async-dapo-qwen3-8b-math.yaml \
       logger.wandb_enabled=true \
       logger.wandb.project=post-training-frameworks \
       "logger.wandb.name=$RUN_ID" \
@@ -46,9 +47,9 @@ launch:
 
 kuberay:
   training:
-    name: ${user:}-sync-dapo-qwen3-8b-math
+    name: ${user:}-async-dapo-qwen3-8b-math
     labels:
-      nrl-k8s/run: sync-dapo-qwen3-8b-math
+      nrl-k8s/run: async-dapo-qwen3-8b-math
     spec:
       rayVersion: "2.52.0"
       headGroupSpec:
@@ -58,7 +59,7 @@ kuberay:
         template:
           spec:
             initContainers:
-              - name: sync-nemo-rl
+              - name: async-nemo-rl
                 image: erikaaranas/nemo-rl:latest
                 envFrom:
                   - secretRef:
@@ -147,7 +148,7 @@ kuberay:
                 kueue.x-k8s.io/podset-slice-size: "2"
             spec:
               initContainers:
-                - name: sync-nemo-rl
+                - name: async-nemo-rl
                   image: erikaaranas/nemo-rl:latest
                   envFrom:
                     - secretRef:
