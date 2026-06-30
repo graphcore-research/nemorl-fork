@@ -113,6 +113,7 @@ kuberay:
                 env:
                   - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
                   - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                  - {name: NRL_FORCE_REBUILD_VENVS, value: "true"}
                   - name: WANDB_API_KEY
                     valueFrom:
                       secretKeyRef:
@@ -203,6 +204,7 @@ kuberay:
                   env:
                     - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
                     - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                    - {name: NRL_FORCE_REBUILD_VENVS, value: "true"}
                     - name: WANDB_API_KEY
                       valueFrom:
                         secretKeyRef:
