@@ -106,6 +106,7 @@ kuberay:
                 env:
                   - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
                   - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                  - {name: NCCL_MNNVL_ENABLE, value: "0"}
                   - name: WANDB_API_KEY
                     valueFrom:
                       secretKeyRef:
@@ -196,6 +197,7 @@ kuberay:
                   env:
                     - {name: NEMO_RL_WORKDIR, value: /tmp/nemo-rl-src}
                     - {name: PYTHONPATH, value: /tmp/nemo-rl-src:/opt/nemo-rl}
+                    - {name: NCCL_MNNVL_ENABLE, value: "0"}
                     - name: WANDB_API_KEY
                       valueFrom:
                         secretKeyRef:
