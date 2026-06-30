@@ -1,4 +1,4 @@
-# Infra for examples/configs/async_nemo-grpo-aime-qwen3-8b.yaml on graphcore.
+# Infra for examples/configs/async-nemo-grpo-aime-qwen3-8b.yaml on graphcore.
 #
 # The recipe is a non-colocated async DTensor/FSDP GRPO run:
 #   cluster.num_nodes=4, cluster.gpus_per_node=4
@@ -36,9 +36,9 @@ launch:
     cd "$NEMO_RL_WORKDIR"
     export PYTHONPATH="$NEMO_RL_WORKDIR:\${PYTHONPATH:-}"
     echo "Using NeMo-RL checkout $(git rev-parse --short HEAD) from $NEMO_RL_WORKDIR"
-    RUN_ID="async_nemo-grpo-aime-qwen3-8b-$(date -u +%Y%m%dT%H%M%SZ)"
+    RUN_ID="async-nemo-grpo-aime-qwen3-8b-$(date -u +%Y%m%dT%H%M%SZ)"
     python -u examples/run_grpo.py \
-      --config examples/configs/async_nemo-grpo-aime-qwen3-8b.yaml \
+      --config examples/configs/async-nemo-grpo-aime-qwen3-8b.yaml \
       logger.wandb_enabled=true \
       logger.wandb.project=post-training-frameworks \
       "logger.wandb.name=$RUN_ID" \
@@ -47,9 +47,9 @@ launch:
 
 kuberay:
   training:
-    name: ${user:}-async_nemo-grpo-aime-qwen3-8b
+    name: ${user:}-async-nemo-grpo-aime-qwen3-8b
     labels:
-      nrl-k8s/run: async_nemo-grpo-aime-qwen3-8b
+      nrl-k8s/run: async-nemo-grpo-aime-qwen3-8b
     spec:
       rayVersion: "2.52.0"
       headGroupSpec:
