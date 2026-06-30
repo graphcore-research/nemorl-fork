@@ -1,11 +1,4 @@
 # Infra for examples/configs/async-nemo-grpo-aime-qwen3-8b.yaml on graphcore.
-#
-# The recipe is a non-colocated async DTensor/FSDP GRPO run:
-#   cluster.num_nodes=4, cluster.gpus_per_node=4
-# so the RayCluster below creates 4 GPU workers, each requesting a
-# 4-GPU node. The recipe reserves 1 node for vLLM generation and uses
-# the remaining nodes for training. Volt multinode nodes are gated by
-# Kueue/reserved taints, so both head and worker pods carry those tolerations.
 
 namespace: graphcore
 image: erikaaranas/nemo-rl:latest
