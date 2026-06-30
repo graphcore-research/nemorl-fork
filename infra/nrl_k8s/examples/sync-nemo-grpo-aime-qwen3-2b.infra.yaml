@@ -146,7 +146,7 @@ kuberay:
             metadata:
               annotations:
                 kueue.x-k8s.io/podset-slice-required-topology: nvidia.com/gpu.clique
-                kueue.x-k8s.io/podset-slice-size: "2"
+                kueue.x-k8s.io/podset-slice-size: "4"
             spec:
               initContainers:
                 - name: sync--nemo-rl
