@@ -8,7 +8,7 @@ grpo:
   normalize_rewards: false
   use_leave_one_out_baseline: false
   val_period: 50
-  val_at_start: false
+  val_at_start: true
   val_at_end: false
   overlong_filtering: false
   advantage_clip_low: null
@@ -119,7 +119,7 @@ policy:
     sequence_parallel: false
     activation_checkpointing: true
     tensor_parallel_size: 1
-    context_parallel_size: 3
+    context_parallel_size: 1
     custom_parallel_plan: null
 
     # Automodel kwargs passed to from_pretrained.
