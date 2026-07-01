@@ -356,11 +356,11 @@ policy:
     colocated:
       # true: generation shares training GPUs
       # false: uses dedicated generation resources
-      enabled: false
+      enabled: true
       # only relevant when enabled is false
       resources:
         gpus_per_node: 4 # Decides num gpus to be dedicated to generation when there is one node in the cluster i.e cluster.num_nodes == 1
-        num_nodes: 14 # Decides number of nodes to be dedicated to generation
+        num_nodes: 3 # Decides number of nodes to be dedicated to generation
 
 data:
   max_input_seq_length: 2048 # upper bound, real truncation occurs at vllm.max_model_len
@@ -438,7 +438,7 @@ logger:
 
 cluster:
   gpus_per_node: 4
-  num_nodes: 16
+  num_nodes: 4
   # Port range for the distributed master address (TCPStore / NCCL rendezvous)
   # and per-worker available ports.  Kept below the OS ephemeral range
   # (32768-60999 on stock Linux).  See ray.sub for the full port layout.
